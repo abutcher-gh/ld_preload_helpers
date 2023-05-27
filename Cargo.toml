@@ -1,0 +1,18 @@
+[package]
+name = "ld_preload_helpers"
+version = "0.1.0"
+authors = ["Adam Butcher"]
+description = "Macros to run code at load time and override C functions"
+repository = "https://github.com/abutcher-gh/ld_preload_helpers"
+readme = "README.md"
+keywords = ["ld_preload", "constructor", "override"]
+license = "Apache-2.0"
+edition = "2021"
+features = ["once_cell"]
+
+[features]
+default = ["std"]
+std = []
+
+[dependencies]
+libc = "0.2"
