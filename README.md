@@ -11,7 +11,8 @@ Mostly useful for `LD_PRELOAD` hooks, hence the name.
 Here `open` is overridden to print something then forward to the real `open`.
 In the rare case that you should wish to recurse into the override, rather than
 call the real API, use `crate::open`.  From anywhere else in the module, `open`
-will refer to the override.
+will refer to the override.  To refer to the real function from elsewhere in
+the program, use `real_open` (as named at the declaration).
 
 Multiple overrides may be specified within a single macro invocation and
 multiple `extern_c_overrides` invocations are supported if desired.  This is
@@ -24,7 +25,7 @@ ignored.
 
 ```rust
 extern_c_overrides! {
-  unsafe fn open(pathname: *const c_char, flags: c_int, mode: libc::mode_t) -> c_int {
+  unsafe fn open/real_open(pathname: *const c_char, flags: c_int, mode: libc::mode_t) -> c_int {
     println!("RUST OPEN {:?} {:x} {:x}", unsafe { CStr::from_ptr(pathname) }, flags, mode);
     // panic!("oops");
     return open(pathname, flags, mode);
@@ -33,7 +34,7 @@ extern_c_overrides! {
     return -1;
   }
 
-  unsafe fn getuid() -> libc::uid_t {
+  unsafe fn getuid/real_getuid() -> libc::uid_t {
     getuid() + 2000
   } catch { u32::MAX }
 }
@@ -42,7 +43,8 @@ extern_c_overrides! {
 ## Image load hook
 
 Called whenever the program/library is loaded, prior to the main entry point
-being run.  Note this demonstrates calling the overridden `getuid`.
+being run.  Note this demonstrates calling the overridden `getuid` and real
+`getuid`.
 
 Currently there can be only one of these owing to a fixed name being used for
 the generated function.  But this may be extended in future to allow the user
@@ -50,7 +52,7 @@ to pass a name.
 
 ```rust
 on_load! {{
-  println!("INIT LIB {}", unsafe { getuid() });
+  println!("INIT LIB {} {}", unsafe { getuid() }, unsafe { real_getuid() });
 }}
 ```
 
@@ -58,13 +60,13 @@ on_load! {{
 
 ```sh
 $ LD_PRELOAD=target/debug/liboverride.so id
-INIT LIB 2501
+INIT LIB 2501 501
 uid=2501 gid=501 euid=501
 ```
 
 ```sh
 $ LD_PRELOAD=target/debug/liboverride.so wc Cargo.lock
-INIT LIB 2501
+INIT LIB 2501 501
 RUST OPEN "Cargo.lock" 0 52c47940
   820  1588 21572 Cargo.lock
 ```

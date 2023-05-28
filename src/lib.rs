@@ -16,9 +16,8 @@ macro_rules! on_load {
 
 #[macro_export]
 macro_rules! extern_c_overrides {
-    (unsafe fn $c_api:ident($($param_name:ident : $param_type:ty),*) -> $return_type:ty $override_body:block catch $catch_body:block $($more_tokens:tt)*) => {
-        #[no_mangle]
-        pub unsafe extern "C" fn $c_api($($param_name: $param_type),*) -> $return_type {
+    (unsafe fn $c_api:ident/$real_api:ident($($param_name:ident : $param_type:ty),*) -> $return_type:ty $override_body:block catch $catch_body:block $($more_tokens:tt)*) => {
+        pub unsafe fn $real_api($($param_name: $param_type),*) -> $return_type {
             #[link(name = "dl")]
             extern "C" {
                 #[allow(dead_code)]
@@ -39,7 +38,12 @@ macro_rules! extern_c_overrides {
                 }
                 return core::mem::transmute(sym);
             });
+            $c_api($($param_name),*)
+        }
 
+        #[no_mangle]
+        pub unsafe extern "C" fn $c_api($($param_name: $param_type),*) -> $return_type {
+            let $c_api = $real_api;
             extern_c_overrides_body!($override_body, $catch_body)
         }
 
